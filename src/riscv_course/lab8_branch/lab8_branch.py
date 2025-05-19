@@ -1,12 +1,19 @@
 import numpy as np
 import subprocess
 import sys
-from googleapiclient.discovery import build
-from googleapiclient.http import MediaFileUpload
+
 try:
     from oauth2client.service_account import ServiceAccountCredentials
 except ModuleNotFoundError as e:
     subprocess.run(["pip3", "install", "oauth2client"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+try:
+    from googleapiclient.discovery import build
+except ModuleNotFoundError as e:
+    subprocess.run(["pip3", "install", "googleapiclient"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+from googleapiclient.http import MediaFileUpload
+
 from ..base_module import BaseTaskClass, TestItem
 from .lab8_gen import GenerateLab8
 
