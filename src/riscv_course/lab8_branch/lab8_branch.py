@@ -5,19 +5,19 @@ import sys
 try:
     from oauth2client.service_account import ServiceAccountCredentials
 except ModuleNotFoundError as e:
-    subprocess.run(["pip3", "install", "oauth2client"], check=True,  stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    subprocess.run(["pip", "install", "oauth2client"], check=True,  stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     from oauth2client.service_account import ServiceAccountCredentials
 
 try:
     from googleapiclient.discovery import build
 except ModuleNotFoundError as e:
-    subprocess.run(["pip3", "install", "googleapiclient"], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    subprocess.run(["pip", "install", "googleapiclient"], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     from googleapiclient.discovery import build
 
 try:
     from googleapiclient.http import MediaFileUpload
 except ModuleNotFoundError as e:
-    subprocess.run(["pip3", "install", "googleapiclient"], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    subprocess.run(["pip", "install", "googleapiclient"], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     from googleapiclient.http import MediaFileUpload
 
 from ..base_module import BaseTaskClass, TestItem
