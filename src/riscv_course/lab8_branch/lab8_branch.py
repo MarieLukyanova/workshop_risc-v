@@ -128,6 +128,7 @@ class Lab8Branch(BaseTaskClass):
 
 
     def generate_task(self) -> str:
+        self.generate_bin()
         return TASK_DESCRIPTION.format(
             asm_code=self.url,
             expected_result=self.expected_result
