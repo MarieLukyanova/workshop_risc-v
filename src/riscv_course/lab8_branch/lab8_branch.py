@@ -88,13 +88,11 @@ class Lab8Branch(BaseTaskClass):
 
     def _generate_tests(self):
         self.tests = []
-        for _ in range(self.tests_num):
-            generator = GenerateLab8(n=self.n, deep=self.deep, id=self.student_id).generate_asm()
-            expected_result = generator[0]
-            #print(expected_result)
-            self.tests.append(TestItem(
-                input_str=f'{expected_result}',
-                showed_input="Generated program analysis",
-                expected=str(expected_result),
-                compare_func=self._compare_default
-            ))
+        generator = GenerateLab8(n=self.n, deep=self.deep, id=self.student_id).generate_asm()
+        expected_result = generator[0]
+        self.tests.append(TestItem(
+            input_str=f'{expected_result}',
+            showed_input="Generated program analysis",
+            expected=str(expected_result),
+            compare_func=self._compare_default
+        ))
