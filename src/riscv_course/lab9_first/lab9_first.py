@@ -1,5 +1,4 @@
 from typing import Optional
-import random
 import numpy as np
 from ..base_module import BaseTaskClass, TestItem
 from .lab9_gen import start_gen
@@ -24,43 +23,21 @@ TASK_DESCRIPTION = """
 """
 
 MAIN_S = r"""
-.data
-    error: .asciz "Access denied!"
-    flag: .asciz "SUCCESS"
-
-.globl main  
+.globl main
 .text
 main:
-    li t1, 0x944f
-    li t2, 0xf10
-    li t4, 0x0  # ожидаемое значение t4
-
-    call solution  # вызов внешней функции с логикой
-
-.globl final
-final:
-    bne t3, t4, fail  # если t3 != t4 fail
-    j success         # если t3 == t4 success
-
-fail:
-    li a0, 1
-    la a1, error
-    li a2, 14
-    li a7, 64
-    ecall
-    j exit
-
-success:
-    li a0, 1
-    la a1, flag
-    li a2, 7
-    li a7, 64
+    la a0, x
+    call read_data
+    ld a1, x
+    call solution
+    call print_result
+    addi a0, x0, 0
+    addi a7, x0, 93
     ecall
 
-exit:
-    li a7, 93
-    li a0, 0
-    ecall
+
+.data
+x: .dword 0
 """
 
 PRINT_RESULT_C = r"""
@@ -78,7 +55,6 @@ void read_data(int64_t *a, int64_t *b){
 
 
 class Lab9First(BaseTaskClass):
-
     def __init__(
             self, *args,
             n: int,
@@ -87,9 +63,9 @@ class Lab9First(BaseTaskClass):
             **kwself
     ):
         super().__init__(*args, **kwself)
-        self.asm_code = start_gen(n=n, deep=deep, student_id=student_id)
-        self.expected_result = 'SUCCESS'
-        self.wrond_result = 'Access denied'
+        self.deep = deep
+        self.student_id = student_id
+        self.asm_code, self.expected_result = start_gen(n=n, deep=self.deep, student_id=self.student_id)
         self.check_files = {
             "main.s": MAIN_S,
             "print_result.c": PRINT_RESULT_C,
@@ -99,19 +75,10 @@ class Lab9First(BaseTaskClass):
         return TASK_DESCRIPTION + self.asm_code
 
     def _generate_tests(self):
-        random.seed(42)
         self.tests = []
         self.tests.append(TestItem(
-            input_str=f"",
+            input_str=f"{self.expected_result}",
             showed_input=f"",
-            expected=str("SUCCESS"),
+            expected=str(self.expected_result),
             compare_func=self._compare_default
         ))
-
-    def check_sol_prereq(self) -> Optional[str]:
-        error = super().check_sol_prereq()
-        if error is not None:
-            return error
-
-        if self.solution.find("ecall") != -1:
-            return "Ошибка: Системные вызовы запрещены."

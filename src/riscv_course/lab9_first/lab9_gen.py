@@ -1,6 +1,134 @@
 import random
 import networkx as nx
 
+OPERATIONS = ["add", "sub", "xor", "and", "or", "sll", "srl"]
+CONDITIONS = ["beqz", "bnez", "blt", "bge", "beq", "bne", "bltu", "bgeu"]
+
+
+def parse_instruction(line: str):
+    parts = line.strip().split()
+
+    if parts[0] == 'j':
+        return ('j', parts[1])
+
+    if parts[0] == 'li':
+        reg = parts[1].strip(',')
+        val_str = parts[2]
+    
+        if val_str.startswith("0x"):
+            val = int(val_str, 16)
+        else:
+            val = int(val_str)
+    
+        return ('li', (reg, val))
+
+    if parts[0] in OPERATIONS:
+        r1 = parts[1].strip(',')
+        r2 = parts[2].strip(',')
+        r3 = parts[3]
+        return ('op', (parts[0], r1, r2, r3))
+
+    if parts[0] in CONDITIONS:
+        cond = parts
+        if cond[0] in ["beqz", "bnez"]:
+            reg = parts[1].strip(",")
+            label = parts[2]
+            return ('cond', (cond[0], reg, None, label))
+
+        else:
+            reg1 = parts[1].strip(",")
+            reg2 = parts[2].strip(",")
+            label = parts[3]
+            return ('cond', (cond[0], reg1, reg2, label))
+
+
+
+def find_solution(asm_code: str) -> str:
+    def cacl_operations(oper):
+        op, r1, r2, r3 = oper
+        if op == "add":
+            registers[r1] = registers[r2] + registers[r3]
+        elif op == "sub":
+            registers[r1] = registers[r2] - registers[r3]
+        elif op == "or":
+            registers[r1] = registers[r2] | registers[r3]
+        elif op == "and":
+            registers[r1] = registers[r2] & registers[r3]
+        elif op == "xor":
+            registers[r1] = registers[r2] ^ registers[r3]
+        elif op == "sll":
+            registers[r1] = registers[r2] << registers[r3]
+
+
+    def calc_cond(oper):
+        cond, r1, r2, node = oper
+        v1 = registers[r1] if r1 in registers else 0
+        v2 = registers[r2] if r2 and r2 in registers else 0  # для beqz/bnez r2 может быть None
+
+        if cond == "beqz":
+            return node if v1 == 0 else None
+        elif cond == "bnez":
+            return node if v1 != 0 else None
+        elif cond == "beq":
+            return node if v1 == v2 else None
+        elif cond == "bne":
+            return node if v1 != v2 else None
+        elif cond == "blt":
+            return node if v1 < v2 else None
+        elif cond == "bge":
+            return node if v1 >= v2 else None
+        elif cond == "bltu":
+            return node if (v1 & 0xFFFFFFFF) < (v2 & 0xFFFFFFFF) else None
+        elif cond == "bgeu":
+            return node if (v1 & 0xFFFFFFFF) >= (v2 & 0xFFFFFFFF) else None
+    last_t3 = 9
+    num_of_line = 7
+    lines = (asm_code.split('final:')[0]).split('_start:')[1]
+    lines = [line.strip() for line in lines.splitlines() if line.strip() and not line.strip().startswith(".")]
+    registers = dict()
+
+    for i in range(4):
+        reg, val = parse_instruction(lines[i])[1]
+        registers[reg] = val
+
+
+    next_node = None
+    curr_node = None
+
+    i = 4
+    while next_node != 'final':
+        if lines[i].startswith('node'):
+            curr_node = lines[i][0:(len(lines[i])-1)]
+            i += 1
+            continue
+        elif (next_node != None) and (curr_node != next_node):
+            i += 1
+            continue
+        else:
+            oper = parse_instruction(lines[i])
+            if oper[0] == 'li':
+                if oper[1][0] == 't3':
+                    last_t3 = i + num_of_line
+                registers[oper[1][0]] = oper[1][1]
+
+            elif oper[0] == 'op':
+                if oper[1][1] == 't3':
+                    last_t3 = i + num_of_line
+                cacl_operations(oper[1])
+
+            elif oper[0] == 'cond':
+                res = calc_cond(oper[1])
+                if res:
+                    next_node = res
+
+            elif oper[0] == 'j':
+                next_node = oper[1]
+            i += 1
+
+    return last_t3
+
+
+
 def generate_random_values(student_id):
     random.seed(student_id)
     t1 = random.randint(0, 0xFFFF)
@@ -52,20 +180,22 @@ def init_temp_reg(G, node, k, n):
     return G, k, temp_registers
 
 
-def add_operations_and_conditions(G, student_id):
+def add_operations_and_conditions(G):
     # добавляет операции и условия для каждой вершины графа
-    random.seed(student_id)
-    operations = ["add", "sub", "xor", "and", "or", "sll", "srl"]
+    T3_FLAG = True
     registers = ["t1", "t2", "t3", "t5", "t6"]
     k = 0
 
     for node in G.nodes():
         # выбираем операцию
-        op = random.choice(operations[:-1])
+        op = random.choice(OPERATIONS[:-1])
         flag_use_t = 0
 
-        # с вероятностью 50% выбираем t3 как целевой регистр
-        if random.random() < 0.5:
+
+        if T3_FLAG:
+            target_reg = "t3"
+            T3_FLAG = False
+        elif random.random() < 0.5:
             target_reg = "t3"
         else:
             target_reg = random.choice([reg for reg in registers if reg != "t3"])  # Выбираем любой регистр, кроме t3
@@ -89,7 +219,7 @@ def add_operations_and_conditions(G, student_id):
 
         # добавляем условие перехода
         if G.out_degree(node) > 1:
-            condition = random.choice(["beqz", "bnez", "blt", "bge", "beq", "bne", "bltu", "bgeu"])
+            condition = random.choice(CONDITIONS)
             if condition in ["beqz", "bnez"]:
                 G.nodes[node]["condition"] = f"{condition} {target_reg},"
             else:
@@ -108,11 +238,15 @@ def add_operations_and_conditions(G, student_id):
 
 def generate_code_from_graph(G, t1, t2, t4):
     # генерирует RISC-V код на основе графа
-    asm_code = ".globl solution\nsolution:\n"
+    asm_code = ".data\n"
+    asm_code += '    error: .asciz "Access denied!"\n'
+    asm_code += '    flag: .asciz "SUCCESS"\n'
+    asm_code += ".text\n.globl _start\n_start:\n"
 
     asm_code += f"    li t1, {hex(t1)}\n"
     asm_code += f"    li t2, {hex(t2)}\n"
-    asm_code += f"    li t4, {hex(t4)}  # ожидаемое значение t4\n"
+    asm_code += f"    li t3, {hex(((t2+t1 % 1000) + 300))}\n"
+    asm_code += f"    li t4, {hex(t4)}\n"
 
     for node in sorted(G.nodes()):  # обход узлов в порядке возрастания
         op = G.nodes[node]["op"]
@@ -136,6 +270,15 @@ def generate_code_from_graph(G, t1, t2, t4):
                 asm_code += f"    j node_{successors[1]}\n"
 
     # проверка на успех
+    asm_code += "final:\n    bne t3, t4, fail  # если t3 != t4 fail\n    j success  # если t3 == t4 success\n"
+
+    asm_code += "fail:\n    li a0, 1\n    la a1, error\n    li a2, 13\n    li a7, 64\n    ecall\n    j exit\n"
+
+    asm_code += "success:\n    li a0, 1\n    la a1, flag\n    li a2, 13\n    li a7, 64\n    ecall\n"
+
+    asm_code += "exit:\n    li a7, 93\n    li a0, 0\n    ecall\n"
+
+    # проверка на успех
     return asm_code
 
 def generate_file(file_name, student_id=123456):
@@ -143,7 +286,7 @@ def generate_file(file_name, student_id=123456):
     G = generate_graph(max_nodes=10, max_depth=5)
 
     # добавляем операции и условия
-    add_operations_and_conditions(G, student_id)
+    add_operations_and_conditions(G)
 
     # генерируем RISC-V код
     t1, t2 = generate_random_values(student_id)
@@ -158,10 +301,13 @@ def start_gen(n: int, deep: int, student_id: int):
     G = generate_graph(max_nodes=n, max_depth=deep)
 
     # добавляем операции и условия
-    add_operations_and_conditions(G, student_id)
+    add_operations_and_conditions(G)
 
     # генерируем RISC-V код
     t1, t2 = generate_random_values(student_id)
     asm_code = generate_code_from_graph(G, t1, t2, t4=0)
+    ans = find_solution(asm_code)
+    return asm_code, ans
 
-    return asm_code
+
+# print(start_gen(7, 3, 12345))
