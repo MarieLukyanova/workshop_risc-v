@@ -54,7 +54,7 @@ class Lab2Debug(BaseTaskClass):
     def load_student_solution(
         self, solfile: Optional[str] = None, solcode: Optional[str] = None
     ):
-        # Do nothing, pass solution (answer) as argument
+        self.answer = solcode
         pass
 
     def check_sol_prereq(self) -> Optional[str]:
