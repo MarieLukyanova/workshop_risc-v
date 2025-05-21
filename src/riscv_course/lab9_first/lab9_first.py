@@ -118,7 +118,7 @@ class Lab9First(BaseTaskClass):
 
         if self.answer.strip() == str(self.expected_result).strip():
             return True, "OK"
-        return False, f"{self.expected_result} Wrong answer {self.answer}"
+        return False, f"Wrong answer"
 
 
     def _generate_tests(self):
