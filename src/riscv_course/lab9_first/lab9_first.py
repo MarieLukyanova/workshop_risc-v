@@ -57,6 +57,7 @@ class Lab9First(BaseTaskClass):
 
     def load_student_solution(
     self, solfile: Optional[str] = None, solcode: Optional[str] = None):
+        self.answer = solcode
     # Do nothing, pass solution (answer) as argument
         pass
 
@@ -114,7 +115,7 @@ class Lab9First(BaseTaskClass):
             return (False, "Bad source code generated.\n"
                             "Contact to the authors to solve the problem"
                     )
-        print()
+
         if self.answer.strip() == str(self.expected_result).strip():
             return True, "OK"
         return False, f"{self.expected_result} Wrong answer {self.answer}"
