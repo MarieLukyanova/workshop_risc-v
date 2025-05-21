@@ -68,14 +68,14 @@ class Lab9First(BaseTaskClass):
         return TASK_DESCRIPTION + self.asm_code
 
 
-    def init_task(self) -> str:
-        task_descp = super().init_task()
-        if self.interactive:
-            if self.print_task_when_i:
-                print(task_descp)
-            os.system("rm -rf main.py pyproject.toml requirements.txt src sol.s main.s print_result.c")
-            os.execlp("bash", "-c")
-        return task_descp
+    # def init_task(self) -> str:
+    #     task_descp = super().init_task()
+    #     if self.interactive:
+    #         if self.print_task_when_i:
+    #             print(task_descp)
+    #         os.system("rm -rf main.py pyproject.toml requirements.txt src sol.s main.s print_result.c")
+    #         os.execlp("bash", "-c")
+    #     return task_descp
 
 
     def check_sol_prereq(self) -> Optional[str]:
