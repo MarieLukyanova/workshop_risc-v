@@ -308,6 +308,3 @@ def start_gen(n: int, deep: int, student_id: int):
     asm_code = generate_code_from_graph(G, t1, t2, t4=0)
     ans = find_solution(asm_code)
     return asm_code, ans
-
-
-# print(start_gen(7, 3, 12345))
