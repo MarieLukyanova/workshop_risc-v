@@ -1,4 +1,5 @@
 from typing import Optional
+import os
 import numpy as np
 from ..base_module import BaseTaskClass, TestItem
 from .lab9_gen import start_gen
@@ -31,19 +32,24 @@ void print_result(int64_t result){
 }
 """
 
+DEFAULT_START_LEN = 11
+DEFAULT_DEEP = 6
 
 class Lab9First(BaseTaskClass):
     def __init__(
             self, *args,
-            n: int,
-            deep: int,
+            n: int = DEFAULT_START_LEN,
+            deep: int = DEFAULT_DEEP,
             answer: str = "",
+            interactive: bool = False, print_task_when_i: bool = True,
             **kwself
     ):
         super().__init__(*args, **kwself)
         self.deep = deep
         self.asm_code, self.expected_result = start_gen(n=n, deep=self.deep, student_id=self.seed)
         self.answer = answer
+        self.interactive = interactive
+        self.print_task_when_i = print_task_when_i
         self.check_files = {
             "print_result.c": PRINT_RESULT_C,
         }
@@ -56,7 +62,20 @@ class Lab9First(BaseTaskClass):
 
 
     def generate_task(self) -> str:
+        main_s = self.asm_code
+        if (err := self.__compile_binary(main_s)) is not None:
+            return err
         return TASK_DESCRIPTION + self.asm_code
+
+
+    def init_task(self) -> str:
+        task_descp = super().init_task()
+        if self.interactive:
+            if self.print_task_when_i:
+                print(task_descp)
+            os.system("rm -rf main.py pyproject.toml requirements.txt src sol.s main.s print_result.c")
+            os.execlp("bash", "-c")
+        return task_descp
 
 
     def check_sol_prereq(self) -> Optional[str]:
@@ -66,6 +85,17 @@ class Lab9First(BaseTaskClass):
     def compile(self) -> Optional[str]:
         return None
     
+
+    def __compile_binary(self, src: str) -> Optional[str]:
+        t_files = self.check_files
+        self.check_files = {"main.s": src}
+        self.solution = ""
+        if (err := self._compile_internal(compile_args="-nostdlib -static -g")) is not None:
+            return f"Bad source code generated. Error: {err}.\n" \
+                    "Contact to the authors to solve the problem"
+        self.check_files = t_files
+        return None
+
 
     def run_tests(self) -> tuple[bool, str]:
         self.check_files["main.s"] = self.asm_code.replace("_start", "main")

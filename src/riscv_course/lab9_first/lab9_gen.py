@@ -3,7 +3,7 @@ import networkx as nx
 
 OPERATIONS = ["add", "sub", "xor", "and", "or", "sll", "srl"]
 CONDITIONS = ["beqz", "bnez", "blt", "bge", "beq", "bne", "bltu", "bgeu"]
-
+REGISTERS = ["t1", "t2", "t3", "t5", "t6"]
 
 def parse_instruction(line: str):
     parts = line.strip().split()
@@ -81,16 +81,19 @@ def find_solution(asm_code: str) -> str:
             return node if (v1 & 0xFFFFFFFF) < (v2 & 0xFFFFFFFF) else None
         elif cond == "bgeu":
             return node if (v1 & 0xFFFFFFFF) >= (v2 & 0xFFFFFFFF) else None
+
     last_t3 = 9
     num_of_line = 7
     lines = (asm_code.split('final:')[0]).split('_start:')[1]
     lines = [line.strip() for line in lines.splitlines() if line.strip() and not line.strip().startswith(".")]
     registers = dict()
 
+    for reg in REGISTERS:
+        registers[reg] = 0
+
     for i in range(4):
         reg, val = parse_instruction(lines[i])[1]
         registers[reg] = val
-
 
     next_node = None
     curr_node = None
@@ -126,14 +129,6 @@ def find_solution(asm_code: str) -> str:
             i += 1
 
     return last_t3
-
-
-
-def generate_random_values(student_id):
-    random.seed(student_id)
-    t1 = random.randint(0, 0xFFFF)
-    t2 = random.randint(0, 0xFFFF)
-    return t1, t2
 
 
 def generate_graph(max_depth=5, max_nodes=10):
@@ -183,7 +178,6 @@ def init_temp_reg(G, node, k, n):
 def add_operations_and_conditions(G):
     # добавляет операции и условия для каждой вершины графа
     T3_FLAG = True
-    registers = ["t1", "t2", "t3", "t5", "t6"]
     k = 0
 
     for node in G.nodes():
@@ -198,9 +192,9 @@ def add_operations_and_conditions(G):
         elif random.random() < 0.5:
             target_reg = "t3"
         else:
-            target_reg = random.choice([reg for reg in registers if reg != "t3"])  # Выбираем любой регистр, кроме t3
+            target_reg = random.choice([reg for reg in REGISTERS if reg != "t3"])  # Выбираем любой регистр, кроме t3
 
-        source_reg = random.choice(registers)  # Источник может быть любым регистром
+        source_reg = random.choice(REGISTERS)  # Источник может быть любым регистром
         if source_reg in ["t5", "t6"]:
             init_value = random.randint(0, 0xFFFF)
             G.nodes[node]["init"] = f"li {source_reg}, {init_value}"
@@ -209,7 +203,7 @@ def add_operations_and_conditions(G):
             imm = random.randint(1, 15) if "sll" in op or "srl" in op else random.randint(0, 0xFFFF)
             G, k, imm = init_temp_reg(G, node, k, imm)
         else:
-            imm = random.choice(registers)
+            imm = random.choice(REGISTERS)
             flag_use_t = imm
             if imm in ["t5", "t6"]:
                 init_value = random.randint(0, 0xFFFF)
@@ -236,17 +230,17 @@ def add_operations_and_conditions(G):
             G.nodes[node]["condition"] = "j"  # безусловный переход
 
 
-def generate_code_from_graph(G, t1, t2, t4):
+def generate_code_from_graph(G):
     # генерирует RISC-V код на основе графа
     asm_code = ".data\n"
     asm_code += '    error: .asciz "Access denied!"\n'
     asm_code += '    flag: .asciz "SUCCESS"\n'
     asm_code += ".text\n.globl _start\n_start:\n"
 
-    asm_code += f"    li t1, {hex(t1)}\n"
-    asm_code += f"    li t2, {hex(t2)}\n"
-    asm_code += f"    li t3, {hex(((t2+t1 % 1000) + 300))}\n"
-    asm_code += f"    li t4, {hex(t4)}\n"
+    asm_code += f"    li t1, {hex(random.randint(0, 0xFFFF))}\n"
+    asm_code += f"    li t2, {hex(random.randint(0, 0xFFFF))}\n"
+    asm_code += f"    li t3, {hex(random.randint(0, 0xFFFF))}\n"
+    asm_code += f"    li t4, {0}\n"
 
     for node in sorted(G.nodes()):  # обход узлов в порядке возрастания
         op = G.nodes[node]["op"]
@@ -288,9 +282,7 @@ def generate_file(file_name, student_id=123456):
     # добавляем операции и условия
     add_operations_and_conditions(G)
 
-    # генерируем RISC-V код
-    t1, t2 = generate_random_values(student_id)
-    asm_code = generate_code_from_graph(G, t1, t2, t4=0)
+    asm_code = generate_code_from_graph(G)
 
     # сохраняем код в файл
     with open(file_name, "w", encoding="utf-8") as f:
@@ -303,8 +295,6 @@ def start_gen(n: int, deep: int, student_id: int):
     # добавляем операции и условия
     add_operations_and_conditions(G)
 
-    # генерируем RISC-V код
-    t1, t2 = generate_random_values(student_id)
-    asm_code = generate_code_from_graph(G, t1, t2, t4=0)
+    asm_code = generate_code_from_graph(G)
     ans = find_solution(asm_code)
     return asm_code, ans
