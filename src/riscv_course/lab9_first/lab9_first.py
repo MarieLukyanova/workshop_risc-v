@@ -114,9 +114,10 @@ class Lab9First(BaseTaskClass):
             return (False, "Bad source code generated.\n"
                             "Contact to the authors to solve the problem"
                     )
+        print()
         if self.answer.strip() == str(self.expected_result).strip():
             return True, "OK"
-        return False, "Wrong answer"
+        return False, f"{self.expected_result} Wrong answer {self.answer}"
 
 
     def _generate_tests(self):
