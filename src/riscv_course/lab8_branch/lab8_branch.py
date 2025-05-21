@@ -49,7 +49,7 @@ class Lab8Branch(BaseTaskClass):
         super().__init__(*args, **kwself)
         self.generator = GenerateLab8(n=n, deep=deep, id=self.seed).generate_asm()
         self.expected_result = self.generator[0]
-        self.generated_asm = self.generator[1]
+        self.asm_code = self.generator[1]
         self.answer = answer
         self.n = n
         self.deep = deep
