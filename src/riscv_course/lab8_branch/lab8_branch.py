@@ -26,24 +26,6 @@ TASK_DESCRIPTION = """
 {asm_code}
 """
 
-MAIN_S = r"""
-.globl main
-.text
-main:
-    la a0, x
-    call read_data
-    ld a1, x
-    call solution
-    call print_result
-    addi a0, x0, 0
-    addi a7, x0, 93
-    ecall
-
-
-.data
-x: .dword 0
-"""
-
 PRINT_RESULT_C = r"""
 #include<stdio.h>
 #include<stdint.h>
@@ -51,48 +33,83 @@ PRINT_RESULT_C = r"""
 void print_result(int64_t result){
     fprintf(stderr, "%ld\n", result);
 }
-
-void read_data(int64_t *a){
-    scanf("%ld", a);
-}
-
 """
 
-
+DEFAULT_START_LEN = 12
+DEFAULT_DEEP = 0.5
 
 class Lab8Branch(BaseTaskClass):
     def __init__(
         self, *args,
-        n: int,
-        deep: float,
-        student_id: int,
+        n: int = DEFAULT_START_LEN,
+        deep: float = DEFAULT_DEEP,
+        answer: str = "",
         **kwself
     ):
         super().__init__(*args, **kwself)
-        self.generator = GenerateLab8(n=n, deep=deep, id=student_id).generate_asm()
+        self.generator = GenerateLab8(n=n, deep=deep, id=self.seed).generate_asm()
         self.expected_result = self.generator[0]
         self.generated_asm = self.generator[1]
+        self.answer = answer
         self.n = n
         self.deep = deep
-        self.student_id = student_id
         self.check_files = {
-            "main.s": MAIN_S,
             "print_result.c": PRINT_RESULT_C,
         }
     
+    def load_student_solution(
+    self, solfile: Optional[str] = None, solcode: Optional[str] = None):
+        self.answer = solcode
+    # Do nothing, pass solution (answer) as argument
+        pass
+
+
     def generate_task(self) -> str:
-        return TASK_DESCRIPTION.format(
-            asm_code=self.generated_asm,
-            expected_result=self.expected_result
+        main_s = self.asm_code
+        if (err := self.__compile_binary(main_s)) is not None:
+            return err
+        return TASK_DESCRIPTION + self.asm_code
+
+
+    def check_sol_prereq(self) -> Optional[str]:
+        return None
+
+
+    def compile(self) -> Optional[str]:
+        return None
+
+
+    def __compile_binary(self, src: str) -> Optional[str]:
+        t_files = self.check_files
+        self.check_files = {"main.s": src}
+        self.solution = ""
+        if (err := self._compile_internal(compile_args="-nostdlib -static -g")) is not None:
+            return f"Bad source code generated. Error: {err}.\n" \
+                    "Contact to the authors to solve the problem"
+        self.check_files = t_files
+        return None
+    
+    def run_tests(self) -> tuple[bool, str]:
+        self.check_files["main.s"] = self.asm_code.replace("_start", "main")
+        self.solution = ""
+        if (err := self._compile_internal(compile_args="-static")) is not None:
+            return (False, f"Bad source code generated. Error: {err}.\n"
+                            "Contact to the authors to solve the problem"
+                    )
+
+        dummy_test = TestItem(
+            input_str="", showed_input="",
+            expected="text", compare_func=self._compare_default
         )
+        res = self._run_solution_internal(dummy_test)
+        if res is None:
+            return (False, "Bad source code generated.\n"
+                            "Contact to the authors to solve the problem"
+                    )
+
+        if self.answer.strip() == str(self.expected_result).strip():
+            return True, "OK"
+        return False, f"Wrong answer"
 
     def _generate_tests(self):
-        self.tests = []
-        generator = GenerateLab8(n=self.n, deep=self.deep, id=self.student_id).generate_asm()
-        expected_result = generator[0]
-        self.tests.append(TestItem(
-            input_str=f'{expected_result}',
-            showed_input="Generated program analysis",
-            expected=str(expected_result),
-            compare_func=self._compare_default
-        ))
+        pass
