@@ -94,8 +94,14 @@ class Lab8Branch(BaseTaskClass):
         subprocess.run(shlex.split(compile_command))
 
         filename_upload = f'{self.seed}.bin'
-        object_key = filename_upload # Имя файла в хранилище
-        file_path = filename_upload  # Локальный файл
+
+        url = self.upload_file(filename_upload)
+
+        return TASK_DESCRIPTION + url
+
+    def upload_file(self, filename: str) -> str:
+        object_key = filename  # Имя файла в хранилище
+        file_path = filename  # Локальный файл
 
         with open(file_path, 'rb') as f:
             content = f.read()
@@ -167,7 +173,7 @@ class Lab8Branch(BaseTaskClass):
         except urllib.error.HTTPError as e:
             print(f'Ошибка: {e.code} {e.reason}')
 
-        return TASK_DESCRIPTION + public_url
+        return public_url
 
     def check_sol_prereq(self) -> Optional[str]:
         return None
